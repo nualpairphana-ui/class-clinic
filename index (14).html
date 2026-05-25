@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class Clinic — ระบบสร้างรหัสอัตโนมัติ</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{--primary:#1a73e8;--primary-light:#e8f0fe;--success:#34a853;--danger:#ea4335;--warning:#fbbc04;--gray-50:#f8f9fa;--gray-100:#f1f3f4;--gray-200:#e8eaed;--gray-400:#bdc1c6;--gray-600:#80868b;--gray-800:#3c4043;--gray-900:#202124;--radius:8px;--radius-lg:12px;--shadow:0 1px 3px rgba(0,0,0,.12)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Sarabun','Segoe UI',sans-serif;background:var(--gray-50);color:var(--gray-900);font-size:15px}
+  .app{max-width:720px;margin:0 auto;padding:24px 16px 60px}
+  .card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:20px 24px;margin-bottom:16px}
+  .card-title{font-size:13px;font-weight:600;color:var(--gray-600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card-title span{background:var(--primary);color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+  .code-banner{background:linear-gradient(135deg,#1a73e8,#0d47a1);border-radius:var(--radius-lg);padding:20px 24px;color:#fff;margin-bottom:16px}
+  .code-value{font-size:26px;font-weight:700;letter-spacing:3px;font-family:'Courier New',monospace}
+  .code-meta{font-size:12px;opacity:.75;margin-top:4px}
+  .copy-btn{background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.5);color:#fff;border-radius:var(--radius);padding:6px 14px;font-size:13px;cursor:pointer;white-space:nowrap;transition:background .15s}
+  .copy-btn:hover:not(:disabled){background:rgba(255,255,255,.35)}
+  .copy-btn:disabled{opacity:.4;cursor:default}
+  .banner-divider{height:1px;background:rgba(255,255,255,.2);margin:12px 0}
+  .upload-zone{border:2px dashed var(--gray-400);border-radius:var(--radius-lg);padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--gray-50)}
+  .upload-zone:hover,.upload-zone.drag{border-color:var(--primary);background:var(--primary-light)}
+  .upload-zone.has-files{border-color:var(--success);background:#f0faf4;border-style:solid}
+  #file-input{display:none}
+  .previews{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .prev-wrap{position:relative;width:86px;height:86px;border-radius:var(--radius);overflow:hidden;border:1.5px solid var(--gray-200);background:var(--gray-100)}
+  .prev-wrap img{width:100%;height:100%;object-fit:cover}
+  .vid-thumb{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:var(--gray-600);gap:3px}
+  .prev-del{position:absolute;top:3px;right:3px;width:18px;height:18px;background:rgba(0,0,0,.6);border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px}
+  .prev-del:hover{background:var(--danger)}
+  .prev-wrap.duplicate{border-color:#ea4335!important;box-shadow:0 0 0 2px #ea433540}
+  .prev-wrap.similar{border-color:#fbbc04!important;box-shadow:0 0 0 2px #fbbc0440}
+  .prev-dup-badge{position:absolute;bottom:0;left:0;right:0;font-size:9px;font-weight:700;text-align:center;padding:2px}
+  .prev-dup-badge.dup{background:#ea4335;color:#fff}
+  .prev-dup-badge.sim{background:#fbbc04;color:#7a4f00}
+  .size-warn{font-size:11px;color:var(--warning);margin-top:4px;display:none}
+  .dup-panel{display:none;border:2px solid #fbbc04;background:#fffde7;border-radius:var(--radius-lg);padding:14px 18px;margin-top:12px}
+  .dup-panel.show{display:block}
+  .dup-panel.danger{border-color:#ea4335;background:#fce8e6}
+  .dup-title{font-size:13px;font-weight:700;margin-bottom:8px}
+  .dup-title.warn{color:#b06000}
+  .dup-title.err{color:#c62828}
+  .dup-list{display:flex;flex-wrap:wrap;gap:9px}
+  .dup-item{border-radius:var(--radius);overflow:hidden;border:2px solid #fbbc04;width:86px}
+  .dup-item.high{border-color:#ea4335}
+  .dup-item img{width:86px;height:86px;object-fit:cover;display:block}
+  .dup-score{font-size:10px;font-weight:700;text-align:center;padding:2px 0;background:#fbbc04;color:#7a4f00}
+  .dup-score.high{background:#ea4335;color:#fff}
+  .dup-code-lbl{font-size:10px;text-align:center;padding:2px;background:#eee;color:#333}
+  .dup-actions{margin-top:10px}
+  .ai-badge{display:inline-flex;align-items:center;gap:5px;background:#f0f4ff;border:1px solid #c5d8fc;border-radius:20px;padding:3px 10px;font-size:12px;color:#1a57c2;font-weight:500}
+  .ai-badge .dot{width:6px;height:6px;background:#1a73e8;border-radius:50%;animation:pulse 1.2s infinite;flex-shrink:0}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .ai-result-box{background:#f0f4ff;border:1.5px solid #c5d8fc;border-radius:var(--radius-lg);padding:14px 16px;margin-top:12px}
+  .ai-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .ai-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+  .ai-chip.prog{background:#1a73e8;color:#fff}
+  .ai-chip.body{background:#e6f4ea;color:#1e7e34}
+  .ai-chip.text-found{background:#fef7e0;color:#b06000}
+  .ai-chip.conf-high{background:#e6f4ea;color:#1e7e34}
+  .ai-chip.conf-medium{background:#fef7e0;color:#b06000}
+  .ai-chip.conf-low{background:#fce8e6;color:#c62828}
+  .ai-reason{font-size:12px;color:var(--gray-600);line-height:1.6;margin-top:4px}
+  .type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .type-btn{border:1.5px solid var(--gray-200);border-radius:var(--radius);padding:12px 8px;text-align:center;cursor:pointer;transition:all .15s;background:#fff}
+  .type-btn:hover{border-color:var(--primary)}
+  .type-btn.active.p{background:#e8f0fe;border-color:#1a73e8;color:#1a73e8}
+  .type-btn.active.r{background:#e6f4ea;border-color:#34a853;color:#34a853}
+  .type-btn.active.a{background:#fce8e6;border-color:#ea4335;color:#c62828}
+  .type-badge{font-size:20px;font-weight:700;margin-bottom:3px}
+  .type-sub{font-size:11px;opacity:.75;margin-top:2px}
+  .media-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .media-btn{border:1.5px solid var(--gray-200);border-radius:var(--radius);padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;background:#fff}
+  .media-btn:hover{border-color:var(--primary)}
+  .media-btn.active{border-color:#1a73e8;background:#e8f0fe}
+  .media-btn.active .ml{color:#1a73e8;font-weight:600}
+  .media-btn.active .mb2{background:#c5d8fc;color:#1a57c2}
+  .mi{font-size:20px;margin-bottom:4px;color:var(--gray-600)}
+  .media-btn.active .mi{color:#1a73e8}
+  .ml{font-size:11px;font-weight:500;color:var(--gray-800)}
+  .mb2{font-size:9px;font-weight:600;background:var(--gray-100);color:var(--gray-600);padding:1px 5px;border-radius:8px;margin-top:3px;display:inline-block}
+  .prog-btn{border:1.5px solid var(--gray-200);border-radius:var(--radius);padding:8px 4px 6px;text-align:center;cursor:pointer;transition:all .15s;background:#fff}
+  .prog-btn:hover{border-color:var(--primary);background:var(--primary-light)}
+  .prog-btn.active{border-color:#1a73e8;background:#e8f0fe}
+  .prog-btn.active .prog-name{color:#1a73e8;font-weight:600}
+  .prog-btn.active .prog-code{background:#1a73e8;color:#fff}
+  .prog-icon{font-size:18px;margin-bottom:3px}
+  .prog-name{font-size:10px;color:var(--gray-800);line-height:1.3;margin-bottom:3px}
+  .prog-code{display:inline-block;font-size:10px;font-weight:700;font-family:'Courier New',monospace;background:var(--gray-100);color:var(--gray-600);padding:1px 5px;border-radius:6px}
+  .sub-btn{border:1.5px solid var(--gray-200);border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer;transition:all .15s;background:#fff;color:var(--gray-800);white-space:nowrap}
+  .sub-btn:hover{border-color:var(--primary);color:var(--primary)}
+  .sub-btn.active{border-color:#1a73e8;background:#1a73e8;color:#fff;font-weight:600}
+  .date-display{display:inline-flex;align-items:center;gap:6px;background:#e8f0fe;color:#1a57c2;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-top:6px}
+  .form-row{display:grid;gap:10px;margin-bottom:10px}
+  .col2{grid-template-columns:1fr 1fr}
+  label{font-size:13px;color:var(--gray-600);display:block;margin-bottom:4px}
+  select,textarea{width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:14px;color:var(--gray-900);font-family:'Sarabun','Segoe UI',sans-serif;background:#fff;transition:border-color .15s}
+  select:focus,textarea:focus{outline:none;border-color:var(--primary)}
+  textarea{min-height:72px;resize:vertical}
+  .section-locked{opacity:.35;pointer-events:none;user-select:none}
+  .lock-msg{text-align:center;padding:10px;font-size:13px;color:var(--gray-600);background:var(--gray-100);border-radius:var(--radius);margin-bottom:10px}
+  .progress-bar{width:100%;height:4px;background:var(--gray-200);border-radius:2px;overflow:hidden;margin-top:10px;display:none}
+  .progress-fill{height:100%;background:var(--primary);border-radius:2px;width:0%;transition:width .4s}
+  .submit-btn{width:100%;padding:14px;font-size:16px;font-weight:600;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-lg);cursor:pointer;margin-top:8px;font-family:'Sarabun',sans-serif;transition:background .2s}
+  .submit-btn:hover:not(:disabled){background:#1557b0}
+  .submit-btn:disabled{opacity:.45;cursor:not-allowed}
+  .toast{position:fixed;top:20px;right:20px;z-index:999;padding:14px 20px;border-radius:var(--radius);font-size:14px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.14);transform:translateX(120%);transition:transform .3s;max-width:320px}
+  .toast.show{transform:translateX(0)}
+  .toast.success{background:var(--success);color:#fff}
+  .toast.error{background:var(--danger);color:#fff}
+  .toast.info{background:var(--primary);color:#fff}
+  .history-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);background:var(--gray-50);margin-bottom:6px;border:1px solid var(--gray-200)}
+  .hi-code{font-family:'Courier New',monospace;font-size:14px;font-weight:700;color:var(--primary);min-width:110px}
+  .hi-time{font-size:12px;color:var(--gray-400)}
+  .badge{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11px;font-weight:600}
+  .badge-p{background:#e8f0fe;color:#1a73e8}
+  .badge-r{background:#e6f4ea;color:#34a853}
+  .badge-a{background:#fce8e6;color:#c62828}
+  @media(max-width:520px){.col2,.type-grid,.media-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+    <div style="width:44px;height:44px;background:linear-gradient(135deg,#1a73e8,#0d47a1);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;flex-shrink:0">CC</div>
+    <div>
+      <div style="font-size:18px;font-weight:700">Class Clinic</div>
+      <div style="font-size:13px;color:#80868b">ระบบสร้างรหัสอัตโนมัติ + ตรวจสอบรูปซ้ำ + AI วิเคราะห์</div>
+    </div>
+  </div>
+
+  <!-- Google Auth Banner -->
+  <div id="auth-banner" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1.5px solid var(--gray-200);border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="auth-icon" style="font-size:22px">🔒</div>
+      <div>
+        <div id="auth-title" style="font-size:14px;font-weight:600;color:var(--gray-900)">เชื่อมต่อ Google Drive</div>
+        <div id="auth-sub" style="font-size:12px;color:var(--gray-600)">จำเป็นสำหรับอัพโหลดวิดีโอขนาดใหญ่ (>30MB)</div>
+      </div>
+    </div>
+    <button id="auth-btn" onclick="signInGoogle()" style="background:#1a73e8;color:#fff;border:none;border-radius:var(--radius);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'Sarabun',sans-serif">เชื่อมต่อ Google</button>
+  </div>
+
+  <div class="code-banner">
+    <div style="font-size:11px;opacity:.7;margin-bottom:4px">รหัสล่าสุดที่บันทึก</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div class="code-value" id="last-code">—</div>
+      <button class="copy-btn" id="copy-last-btn" onclick="copyLastCode()" disabled>คัดลอก</button>
+    </div>
+    <div class="banner-divider"></div>
+    <div style="font-size:11px;opacity:.7;margin-bottom:4px;margin-top:10px">รหัสถัดไปที่จะสร้าง</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="code-value" id="preview-code" style="font-size:20px">—</div>
+      <button class="copy-btn" onclick="copyCode()">คัดลอก</button>
+    </div>
+    <div class="code-meta" id="preview-meta">อัพโหลดไฟล์เพื่อเริ่มต้น</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>1</span>อัพโหลดไฟล์ — ตรวจสอบรูปซ้ำ + AI วิเคราะห์</div>
+    <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px">รองรับรูปและวิดีโอ — แนะนำไม่เกิน 30MB ต่อไฟล์</div>
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <input type="file" id="file-input" multiple accept="image/*,video/*" onchange="handleFiles(this.files)">
+      <div style="font-size:36px;margin-bottom:8px" id="upload-icon">📂</div>
+      <div style="font-size:14px;color:#80868b;line-height:1.7">
+        <strong style="color:#1a73e8">คลิกเพื่อเลือกไฟล์</strong> หรือลากมาวาง<br>
+        <span style="font-size:12px">JPG, PNG, GIF, MP4, MOV — AI จะวิเคราะห์หัตถการอัตโนมัติ</span>
+      </div>
+    </div>
+    <div class="previews" id="previews"></div>
+    <div class="size-warn" id="size-warn">⚠️ มีไฟล์ขนาดใหญ่ — อาจใช้เวลานานในการอัพโหลด</div>
+    <div id="checking-badge" style="display:none;margin-top:8px">
+      <span class="ai-badge"><span class="dot"></span>กำลังตรวจสอบรูปซ้ำ...</span>
+    </div>
+    <div class="file-count-msg" id="file-count" style="font-size:12px;color:var(--gray-600);margin-top:8px"></div>
+    <div class="dup-panel" id="dup-panel">
+      <div class="dup-title warn" id="dup-title">⚠️ พบรูปที่คล้ายกัน</div>
+      <div style="font-size:12px;color:#5f4a00;margin-bottom:9px" id="dup-desc"></div>
+      <div class="dup-list" id="dup-list"></div>
+      <div class="dup-actions">
+        <button style="padding:7px 14px;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;border:none;background:#ea4335;color:#fff;font-family:'Sarabun',sans-serif" onclick="cancelDuplicate()">ยกเลิก / เลือกรูปใหม่</button>
+      </div>
+    </div>
+    <div id="ai-analyzing-box" style="display:none;margin-top:10px">
+      <span class="ai-badge"><span class="dot"></span>AI กำลังอ่านรูปและวิเคราะห์หัตถการ...</span>
+    </div>
+    <div class="ai-result-box" id="ai-result-box" style="display:none">
+      <div style="font-size:13px;font-weight:600;color:#1a57c2;margin-bottom:8px">🤖 ผลวิเคราะห์จากรูปภาพ</div>
+      <div class="ai-row" id="ai-chips"></div>
+      <div class="ai-reason" id="ai-reason-text"></div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:6px">* กรอกให้อัตโนมัติแล้ว — ตรวจสอบและแก้ไขได้</div>
+    </div>
+  </div>
+
+  <div id="form-section">
+    <div class="lock-msg" id="lock-msg">⬆️ อัพโหลดไฟล์ก่อนเพื่อดำเนินการต่อ</div>
+    <div id="form-body" class="section-locked">
+
+      <div class="card">
+        <div class="card-title"><span>2</span>ปี / เดือน</div>
+        <div class="form-row col2">
+          <div><label>ปี (พ.ศ.)</label><select id="year-select" onchange="updateDateDisplay()"></select></div>
+          <div>
+            <label>เดือน</label>
+            <select id="month-select" onchange="updateDateDisplay()">
+              <option value="01">มกราคม</option><option value="02">กุมภาพันธ์</option>
+              <option value="03">มีนาคม</option><option value="04">เมษายน</option>
+              <option value="05">พฤษภาคม</option><option value="06">มิถุนายน</option>
+              <option value="07">กรกฎาคม</option><option value="08">สิงหาคม</option>
+              <option value="09">กันยายน</option><option value="10">ตุลาคม</option>
+              <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+            </select>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px">โฟลเดอร์ที่จะบันทึก</div>
+        <div class="date-display" id="date-display">📁 —</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>3</span>ประเภทเนื้อหา</div>
+        <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px">AI วิเคราะห์ให้อัตโนมัติ — แก้ไขได้</div>
+        <div class="type-grid">
+          <div class="type-btn active p" id="tb-p" onclick="setType('P',this)"><div class="type-badge">P</div><div style="font-size:13px;font-weight:600">โปรโมชั่น</div><div class="type-sub">มีราคา / ข้อเสนอ</div></div>
+          <div class="type-btn r" id="tb-r" onclick="setType('R',this)"><div class="type-badge">R</div><div style="font-size:13px;font-weight:600">รีวิว</div><div class="type-sub">รูปหน้าคน ไม่มีราคา</div></div>
+          <div class="type-btn a" id="tb-a" onclick="setType('A',this)"><div class="type-badge">A</div><div style="font-size:13px;font-weight:600">Awareness</div><div class="type-sub">ข้อความล้วน</div></div>
+        </div>
+        <div id="type-hint" style="margin-top:10px;font-size:12px;padding:8px 12px;border-radius:var(--radius);display:none"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>4</span>ประเภทสื่อ</div>
+        <div class="media-grid">
+          <div class="media-btn active" id="mb-single" onclick="setMedia('single photo',this)"><div class="mi">🖼</div><div class="ml">Single Photo</div><div class="mb2">รูปเดี่ยว</div></div>
+          <div class="media-btn" id="mb-album" onclick="setMedia('photo album',this)"><div class="mi">🗂</div><div class="ml">Photo Album</div><div class="mb2">อัลบั้ม</div></div>
+          <div class="media-btn" id="mb-video" onclick="setMedia('video',this)"><div class="mi">🎬</div><div class="ml">Video</div><div class="mb2">วิดีโอ</div></div>
+          <div class="media-btn" id="mb-text" onclick="setMedia('text',this)"><div class="mi">📝</div><div class="ml">Text</div><div class="mb2">ข้อความ</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>5</span>สาขา</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 12px;background:#e8f0fe;border-radius:8px;border:1.5px solid #1a73e8" id="all-row">
+          <input type="checkbox" id="all-branch-toggle" onchange="toggleAllBranch(this)" checked style="width:16px;height:16px;cursor:pointer;accent-color:#1a73e8;flex-shrink:0">
+          <div style="flex:1">
+            <label for="all-branch-toggle" style="cursor:pointer;font-size:14px;font-weight:600;color:#202124;display:block;margin:0">โปรโมชั่นรวมทุกสาขา <span style="background:#1a73e8;color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px">DEFAULT</span></label>
+            <div style="font-size:12px;color:#80868b;margin-top:1px">ไม่แยกสาขา — นับเลขรวมตามโปรแกรม</div>
+          </div>
+          <div id="all-branch-badge" style="background:#e8f0fe;color:#1a73e8;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">ALL</div>
+        </div>
+        <div id="branch-select-wrap" style="opacity:.35;pointer-events:none">
+          <label>เลือกสาขา</label>
+          <select id="branch" onchange="updateCode()" style="margin-top:4px">
+            <option value="">— เลือกสาขา —</option>
+            <optgroup label="ภาคตะวันออกเฉียงเหนือ">
+              <option value="KKC">กังสดาล (KKC)</option><option value="UDN">อุดรธานี (UDN)</option>
+              <option value="UBN">อุบลราชธานี (UBN)</option><option value="NMA">นครราชสีมา (NMA)</option>
+              <option value="MKM">มหาสารคาม (MKM)</option><option value="BRM">บุรีรัมย์ (BRM)</option>
+              <option value="KKU">หอกาญ (KKU)</option><option value="RET">ร้อยเอ็ด (RET)</option>
+              <option value="CPM">ชัยภูมิ (CPM)</option><option value="SSK">ศรีสะเกษ (SSK)</option>
+              <option value="SRN">สุรินทร์ (SRN)</option><option value="NPM">นครพนม (NPM)</option>
+              <option value="SNK">สกลนคร (SNK)</option><option value="KSN">กาฬสินธุ์ (KSN)</option>
+              <option value="NKI">หนองคาย (NKI)</option>
+            </optgroup>
+            <optgroup label="ภาคตะวันออก">
+              <option value="BSN">บางแสน (BSN)</option><option value="AMT">อมตะ (AMT)</option>
+              <option value="CCO">ฉะเชิงเทรา (CCO)</option><option value="RYG">ระยอง (RYG)</option>
+              <option value="SPC">สหพัฒน์ (SPC)</option>
+            </optgroup>
+            <optgroup label="กรุงเทพฯ / เหนือ / อื่นๆ">
+              <option value="RAT">รัชดา (RAT)</option><option value="CRI">เชียงราย (CRI)</option>
+              <option value="KKG">Class Go (KKG)</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>6</span>หัตถการ / โปรแกรม</div>
+        <label style="margin-bottom:8px;display:block">โปรแกรมหลัก <span style="font-size:11px;color:var(--gray-600)">(AI เลือกให้ — แก้ไขได้)</span></label>
+        <div id="prog-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:14px">
+          <div class="prog-btn" data-prog="B" onclick="selectProgram('B',this)"><div class="prog-icon">💉</div><div class="prog-name">โบท็อกซ์</div><div class="prog-code">B</div></div>
+          <div class="prog-btn" data-prog="F" onclick="selectProgram('F',this)"><div class="prog-icon">✨</div><div class="prog-name">ฟิลเลอร์</div><div class="prog-code">F</div></div>
+          <div class="prog-btn" data-prog="A" onclick="selectProgram('A',this)"><div class="prog-icon">🔴</div><div class="prog-name">สิว</div><div class="prog-code">A</div></div>
+          <div class="prog-btn" data-prog="M" onclick="selectProgram('M',this)"><div class="prog-icon">🌟</div><div class="prog-name">แฟต/หน้าใส</div><div class="prog-code">M</div></div>
+          <div class="prog-btn" data-prog="H" onclick="selectProgram('H',this)"><div class="prog-icon">🔊</div><div class="prog-name">ไฮฟุ</div><div class="prog-code">H</div></div>
+          <div class="prog-btn" data-prog="S" onclick="selectProgram('S',this)"><div class="prog-icon">💧</div><div class="prog-name">ผิว</div><div class="prog-code">S</div></div>
+          <div class="prog-btn" data-prog="W" onclick="selectProgram('W',this)"><div class="prog-icon">🪒</div><div class="prog-name">กำจัดขน</div><div class="prog-code">W</div></div>
+          <div class="prog-btn" data-prog="T" onclick="selectProgram('T',this)"><div class="prog-icon">🧖</div><div class="prog-name">ทรีทเม้นท์</div><div class="prog-code">T</div></div>
+          <div class="prog-btn" data-prog="N" onclick="selectProgram('N',this)"><div class="prog-icon">👃</div><div class="prog-name">จมูก</div><div class="prog-code">N</div></div>
+          <div class="prog-btn" data-prog="L" onclick="selectProgram('L',this)"><div class="prog-icon">🧵</div><div class="prog-name">ร้อยไหม</div><div class="prog-code">L</div></div>
+          <div class="prog-btn" data-prog="K" onclick="selectProgram('K',this)"><div class="prog-icon">⚡</div><div class="prog-name">Pico</div><div class="prog-code">K</div></div>
+          <div class="prog-btn" data-prog="U" onclick="selectProgram('U',this)"><div class="prog-icon">📡</div><div class="prog-name">Ultrafomer</div><div class="prog-code">U</div></div>
+          <div class="prog-btn" data-prog="I" onclick="selectProgram('I',this)"><div class="prog-icon">🔬</div><div class="prog-name">Biostimulator</div><div class="prog-code">I</div></div>
+          <div class="prog-btn" data-prog="P" onclick="selectProgram('P',this)"><div class="prog-icon">🩸</div><div class="prog-name">PRP</div><div class="prog-code">P</div></div>
+          <div class="prog-btn" data-prog="C" onclick="selectProgram('C',this)"><div class="prog-icon">💊</div><div class="prog-name">Cytocare</div><div class="prog-code">C</div></div>
+          <div class="prog-btn" data-prog="V" onclick="selectProgram('V',this)"><div class="prog-icon">⚖️</div><div class="prog-name">Wegovy</div><div class="prog-code">V</div></div>
+          <div class="prog-btn" data-prog="O" onclick="selectProgram('O',this)"><div class="prog-icon">🌿</div><div class="prog-name">BioActive</div><div class="prog-code">O</div></div>
+          <div class="prog-btn" data-prog="Z" onclick="selectProgram('Z',this)"><div class="prog-icon">👄</div><div class="prog-name">Volumizer Lip</div><div class="prog-code">Z</div></div>
+          <div class="prog-btn" data-prog="G" onclick="selectProgram('G',this)"><div class="prog-icon">🌺</div><div class="prog-name">Mulkwang</div><div class="prog-code">G</div></div>
+          <div class="prog-btn" data-prog="ALL" onclick="selectProgram('ALL',this)"><div class="prog-icon">🎁</div><div class="prog-name">โปรรวม</div><div class="prog-code">ALL</div></div>
+        </div>
+        <div id="sub-section" style="display:none">
+          <div style="height:1px;background:var(--gray-200);margin-bottom:12px"></div>
+          <label style="margin-bottom:8px;display:block">โปรแกรมย่อย <span id="selected-prog-label" style="background:#1a73e8;color:#fff;font-size:11px;font-weight:700;padding:1px 8px;border-radius:20px;margin-left:6px"></span></label>
+          <div id="sub-grid" style="display:flex;flex-wrap:wrap;gap:7px"></div>
+        </div>
+        <select id="program" style="display:none"></select>
+        <select id="sub" style="display:none"></select>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>7</span>หมายเหตุ (ไม่บังคับ)</div>
+        <textarea id="note" placeholder="รายละเอียด เงื่อนไข หรือหมายเหตุเพิ่มเติม..."></textarea>
+      </div>
+
+      <div class="progress-bar" id="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <button class="submit-btn" id="submit-btn" onclick="submitForm()" disabled>
+        บันทึกและสร้างรหัส → อัพโหลด Drive + บันทึก Sheet
+      </button>
+    </div>
+  </div>
+
+  <div class="card" id="history-card" style="display:none;margin-top:16px">
+    <div class="card-title"><span style="background:#34a853">✓</span>รายการที่บันทึกแล้ว (เซสชันนี้)</div>
+    <div id="history-list"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+//  ★★★ แก้ตรงนี้จุดเดียว — วาง URL จาก Apps Script ★★★
+// ============================================================
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzktRRMtl-NULHwl9oIQSySc41USaRovhxgjP5MpzHFzbEULGjIbr4WxE4zpw0pxSeV/exec";
+// ============================================================
+
+// ── Google OAuth Config ──
+const GOOGLE_CLIENT_ID = "501225049086-l6lbna2j01bvkuas6s05tu3kpddv3l1b.apps.googleusercontent.com";
+const DRIVE_SCOPE      = "https://www.googleapis.com/auth/drive.file";
+let   googleAccessToken = null;
+let   tokenClient       = null;
+
+// ── เริ่ม Google OAuth ──
+function initGoogleAuth() {
+  if (!window.google) return;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope:     DRIVE_SCOPE,
+    callback:  (resp) => {
+      if (resp.error) { showToast('เชื่อมต่อ Google ไม่สำเร็จ', 'error'); return; }
+      googleAccessToken = resp.access_token;
+      document.getElementById('auth-icon').textContent  = '✅';
+      document.getElementById('auth-title').textContent = 'เชื่อมต่อ Google Drive แล้ว';
+      document.getElementById('auth-sub').textContent   = 'อัพโหลดวิดีโอขนาดใหญ่ได้ไม่จำกัด';
+      document.getElementById('auth-btn').textContent   = 'เชื่อมต่อแล้ว';
+      document.getElementById('auth-btn').disabled      = true;
+      document.getElementById('auth-btn').style.background = '#34a853';
+      document.getElementById('auth-banner').style.borderColor = '#34a853';
+    }
+  });
+}
+function signInGoogle() {
+  if (!tokenClient) { showToast('Google auth ยังโหลดไม่เสร็จ ลองใหม่อีกครั้ง', 'error'); return; }
+  tokenClient.requestAccessToken();
+}
+
+// ── อัพโหลดวิดีโอตรง Google Drive API (Resumable Upload) ──
+async function uploadLargeFileToDrive(fileEntry, folderId, onProgress) {
+  const file = fileEntry.file;
+
+  // 1) สร้าง resumable upload session
+  const metaRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + googleAccessToken,
+      'Content-Type':  'application/json',
+      'X-Upload-Content-Type': file.type,
+      'X-Upload-Content-Length': file.size,
+    },
+    body: JSON.stringify({
+      name:    file.name,
+      parents: [folderId],
+    })
+  });
+  if (!metaRes.ok) throw new Error('ไม่สามารถเริ่ม upload session ได้');
+  const uploadUrl = metaRes.headers.get('Location');
+
+  // 2) อัพโหลดเป็น chunks 5MB
+  const CHUNK = 5 * 1024 * 1024;
+  let start = 0;
+  let fileId = null;
+  while (start < file.size) {
+    const end   = Math.min(start + CHUNK, file.size);
+    const chunk = file.slice(start, end);
+    const res   = await fetch(uploadUrl, {
+      method:  'PUT',
+      headers: {
+        'Content-Range': `bytes ${start}-${end-1}/${file.size}`,
+        'Content-Type':  file.type,
+      },
+      body: chunk
+    });
+    if (res.status === 200 || res.status === 201) {
+      const data = await res.json();
+      fileId = data.id;
+    } else if (res.status !== 308) {
+      throw new Error('Upload failed at byte ' + start);
+    }
+    start = end;
+    if (onProgress) onProgress(Math.round(start / file.size * 90));
+  }
+
+  // 3) ตั้ง permission ให้ public
+  await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+    method:  'POST',
+    headers: { 'Authorization': 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ role: 'reader', type: 'anyone' })
+  });
+
+  if (onProgress) onProgress(100);
+  return {
+    fileId,
+    viewUrl:      'https://drive.google.com/open?id=' + fileId,
+    thumbnailUrl: 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w400',
+    fileName:     file.name,
+    hash:         fileEntry.hash || ''
+  };
+}
+
+// ── helper: เรียก Apps Script ผ่าน fetch ──
+async function callScript(action, params = {}) {
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method:  "POST",
+    // Apps Script ไม่รับ application/json ตรงๆ — ต้องใช้ text/plain
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body:    JSON.stringify({ action, ...params }),
+  });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+let currentType='P', currentMedia='single photo';
+let files=[], sessionHistory=[], dupBlocked=false, savedHashes=[], formUnlocked=false;
+
+const MONTH_NAMES={"01":"มกราคม","02":"กุมภาพันธ์","03":"มีนาคม","04":"เมษายน","05":"พฤษภาคม","06":"มิถุนายน","07":"กรกฎาคม","08":"สิงหาคม","09":"กันยายน","10":"ตุลาคม","11":"พฤศจิกายน","12":"ธันวาคม"};
+const subOptions={
+  B:[['00','รวม'],['01','ลิฟกรอบหน้า'],['02','กราม'],['03','ริ้วรอย'],['04','รักแร้ ลดเหงื่อ'],['05','น่อง'],['06','หน้าเรียว'],['07','หน้าผาก']],
+  F:[['00','รวม'],['01','ใต้ตา'],['02','ปาก'],['03','คาง'],['04','ล่องแก้ม'],['05','แก้มตอบ'],['06','ขมับ'],['07','หน้าผาก'],['08','จมูก']],
+  A:[['00','สิว']],M:[['00','แฟต'],['01','หน้าใส']],H:[['00','รวม']],
+  S:[['00','ฉีด'],['01','ฝ้า']],
+  W:[['00','รวม'],['01','รักแร้'],['02','หนวด/เครา'],['03','Bikini/Hollywood'],['04','แขน'],['05','ขา'],['06','หน้า']],
+  T:[['00','รวม'],['01','ยกกระชับใบหน้า'],['02','ลดเลือนริ้วรอย'],['03','ผิวหน้ากระจ่างใส'],['04','รักษาสิว'],['05','ลดรอยคล้ำใต้ตา'],['06','ความชุ่มชื้น']],
+  N:[['00','รวม']],L:[['00','รวม']],
+  K:[['00','รวม'],['01','หน้า'],['02','หลัง'],['03','รักแร้'],['04','รอยสัก แผลเป็น']],
+  U:[['00','รวม']],I:[['00','รวม']],P:[['00','รวม']],C:[['00','รวม']],
+  V:[['00','รวม']],O:[['00','รวม']],Z:[['00','รวม']],G:[['00','รวม']],
+  ALL:[['00','อื่นๆ'],['01','Dday'],['02','เทศกาล'],['03','ผ่อน 0%'],['04','Bundle']]
+};
+const progLabels={B:'โบท็อกซ์',F:'ฟิลเลอร์',A:'สิว',M:'แฟต/หน้าใส',H:'ไฮฟุ',S:'ผิว',W:'กำจัดขน',T:'ทรีทเม้นท์',N:'จมูก',L:'ร้อยไหม',K:'Pico',U:'Ultrafomer',I:'Biostimulator',P:'PRP',C:'Cytocare',V:'Wegovy',O:'BioActive',Z:'Volumizer Lip',G:'Mulkwang',ALL:'โปรรวม'};
+
+function initYearMonth(){
+  const now=new Date(),cyBE=now.getFullYear()+543;
+  const sel=document.getElementById('year-select');
+  for(let y=cyBE-2;y<=cyBE+1;y++){const o=document.createElement('option');o.value=String(y-543);o.textContent='พ.ศ. '+y;if(y===cyBE)o.selected=true;sel.appendChild(o);}
+  document.getElementById('month-select').value=String(now.getMonth()+1).padStart(2,'0');
+  updateDateDisplay();
+}
+function getSelectedYear(){return document.getElementById('year-select').value;}
+function getSelectedMonth(){return document.getElementById('month-select').value;}
+function updateDateDisplay(){
+  const y=getSelectedYear(),m=getSelectedMonth(),yBE=parseInt(y)+543,mName=MONTH_NAMES[m]||m;
+  document.getElementById('date-display').textContent='📁 '+yBE+' / '+m+'-'+mName;
+}
+function unlockForm(){
+  if(formUnlocked)return;formUnlocked=true;
+  document.getElementById('form-body').classList.remove('section-locked');
+  document.getElementById('lock-msg').style.display='none';
+  document.getElementById('submit-btn').disabled=false;
+  document.getElementById('upload-zone').classList.add('has-files');
+  document.getElementById('upload-icon').textContent='✅';
+}
+function lockForm(){
+  formUnlocked=false;
+  document.getElementById('form-body').classList.add('section-locked');
+  document.getElementById('lock-msg').style.display='block';
+  document.getElementById('submit-btn').disabled=true;
+  document.getElementById('upload-zone').classList.remove('has-files');
+  document.getElementById('upload-icon').textContent='📂';
+}
+function setType(t,el){currentType=t;document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');updateCode();}
+function setTypeById(t){currentType=t;document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));const map={P:'tb-p',R:'tb-r',A:'tb-a'};if(map[t])document.getElementById(map[t]).classList.add('active');updateCode();}
+function setMedia(m,el){currentMedia=m;document.querySelectorAll('.media-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');}
+function setMediaById(m){currentMedia=m;document.querySelectorAll('.media-btn').forEach(b=>b.classList.remove('active'));const map={'single photo':'mb-single','photo album':'mb-album','video':'mb-video','text':'mb-text'};if(map[m])document.getElementById(map[m]).classList.add('active');}
+function selectProgram(prog,el){
+  document.querySelectorAll('.prog-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');
+  const progSel=document.getElementById('program');progSel.innerHTML=`<option value="${prog}">${prog}</option>`;progSel.value=prog;
+  const subs=subOptions[prog]||[['00','รวม']];
+  document.getElementById('selected-prog-label').textContent=progLabels[prog]||prog;
+  document.getElementById('sub-section').style.display='block';
+  const subGrid=document.getElementById('sub-grid');subGrid.innerHTML='';
+  subs.forEach(([v,l])=>{const btn=document.createElement('div');btn.className='sub-btn'+(v==='00'?' active':'');btn.textContent=l;btn.dataset.val=v;btn.onclick=()=>selectSub(v,btn);subGrid.appendChild(btn);});
+  const subSel=document.getElementById('sub');subSel.innerHTML=subs.map(([v,l])=>`<option value="${v}">${l}</option>`).join('');subSel.value='00';
+  updateCode();
+  setTimeout(()=>document.getElementById('sub-section').scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+}
+function selectSub(val,el){document.querySelectorAll('.sub-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');document.getElementById('sub').value=val;updateCode();}
+function toggleAllBranch(cb){
+  const wrap=document.getElementById('branch-select-wrap'),badge=document.getElementById('all-branch-badge'),row=document.getElementById('all-row');
+  if(cb.checked){wrap.style.opacity='0.35';wrap.style.pointerEvents='none';badge.style.display='inline-block';row.style.background='#e8f0fe';row.style.borderColor='#1a73e8';}
+  else{wrap.style.opacity='1';wrap.style.pointerEvents='';badge.style.display='none';row.style.background='#f8f9fa';row.style.borderColor='#e8eaed';}
+  updateCode();
+}
+function getEffectiveBranch(){return document.getElementById('all-branch-toggle').checked?'ALL':document.getElementById('branch').value;}
+
+// ── updateCode: เดิมใช้ google.script.run → ใช้ fetch แทน ──
+function updateCode(){
+  const branch=getEffectiveBranch(),prog=document.getElementById('program').value,sub=document.getElementById('sub').value||'00';
+  const codeEl=document.getElementById('preview-code'),metaEl=document.getElementById('preview-meta');
+  if(!branch||!prog){codeEl.textContent='—';metaEl.textContent='เลือกสาขา → โปรแกรม';return;}
+  const lbl=branch==='ALL'?'ทุกสาขา (ALL)':branch;
+  codeEl.textContent='...';
+  callScript('getNextNumber',{type:currentType,program:prog,sub,branch})
+    .then(n=>{
+      codeEl.textContent=currentType+prog+sub+'-'+String(n).padStart(4,'0');
+      metaEl.textContent='ลำดับที่ '+n+' | '+lbl;
+    })
+    .catch(()=>{codeEl.textContent='—';metaEl.textContent='เชื่อมต่อไม่ได้';});
+}
+
+function copyCode(){const code=document.getElementById('preview-code').textContent;if(code==='—'||code==='...')return;navigator.clipboard.writeText(code).catch(()=>{});showToast('คัดลอก '+code+' แล้ว','success');}
+function copyLastCode(){const code=document.getElementById('last-code').textContent;if(code==='—')return;navigator.clipboard.writeText(code).catch(()=>{});showToast('คัดลอก '+code+' แล้ว','success');}
+
+function computePHash(dataUrl){return new Promise(resolve=>{const img=new Image();img.onload=()=>{const S=32,SM=8,cv=document.createElement('canvas');cv.width=S;cv.height=S;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0,S,S);const px=ctx.getImageData(0,0,S,S).data;const gray=[];for(let i=0;i<S*S;i++)gray.push(.299*px[i*4]+.587*px[i*4+1]+.114*px[i*4+2]);const dct=Array.from({length:S},()=>new Array(S).fill(0));for(let u=0;u<S;u++)for(let v=0;v<S;v++){let s=0;for(let x=0;x<S;x++)for(let y=0;y<S;y++)s+=gray[x*S+y]*Math.cos((2*x+1)*u*Math.PI/(2*S))*Math.cos((2*y+1)*v*Math.PI/(2*S));dct[u][v]=s;}const low=[];for(let i=0;i<SM;i++)for(let j=0;j<SM;j++)if(!(i===0&&j===0))low.push(dct[i][j]);const avg=low.reduce((a,b)=>a+b,0)/low.length;const bits=low.map(v=>v>=avg?1:0);let hex='';for(let i=0;i<bits.length;i+=4)hex+=parseInt(bits.slice(i,i+4).join(''),2).toString(16);resolve(hex);};img.onerror=()=>resolve(null);img.src=dataUrl;});}
+function computeVideoHash(dataUrl){return new Promise(resolve=>{const v=document.createElement('video');v.muted=true;v.preload='metadata';v.src=dataUrl;v.onseeked=async()=>{const cv=document.createElement('canvas');cv.width=320;cv.height=240;cv.getContext('2d').drawImage(v,0,0,320,240);resolve(await computePHash(cv.toDataURL()));};v.onerror=()=>resolve(null);v.addEventListener('loadedmetadata',()=>{v.currentTime=0.5;});});}
+function hammingDist(a,b){if(!a||!b||a.length!==b.length)return 999;let d=0;for(let i=0;i<a.length;i++){let x=parseInt(a[i],16)^parseInt(b[i],16);while(x){d+=x&1;x>>=1;}}return d;}
+function hashSim(dist){return Math.round((1-dist/60)*100);}
+
+// ── loadHashesFromSheet: ใช้ fetch แทน google.script.run ──
+function loadHashesFromSheet(){
+  callScript('getAllHashes')
+    .then(h=>{savedHashes=Array.isArray(h)?h:[];})
+    .catch(()=>{});
+}
+
+function autoDetectFromFiles(fileList){
+  const hasVideo=fileList.some(f=>f.type.startsWith('video/')),count=fileList.length;
+  let m='single photo';if(hasVideo)m='video';else if(count>1)m='photo album';
+  setMediaById(m);
+}
+
+// ── runAIAnalysis: ใช้ fetch แทน google.script.run ──
+async function runAIAnalysis(fileEntry){
+  const analyzeBox=document.getElementById('ai-analyzing-box'),resultBox=document.getElementById('ai-result-box');
+  analyzeBox.style.display='block';resultBox.style.display='none';
+  try{
+    const result=await callScript('analyzeImage',{base64:fileEntry.base64,mimeType:fileEntry.mimeType||'image/jpeg'});
+    analyzeBox.style.display='none';
+    if(!result.success){console.warn('AI:',result.error);return;}
+    if(['P','R','A'].includes(result.contentType)){
+      setTypeById(result.contentType);
+      const h=document.getElementById('type-hint');h.textContent='🤖 '+(result.contentTypeReason||'');h.style.display='block';h.style.background='#f0f4ff';h.style.color='#1a57c2';h.style.border='1px solid #c5d8fc';
+    }
+    if(result.program){
+      const pb=document.querySelector(`.prog-btn[data-prog="${result.program}"]`);
+      if(pb){selectProgram(result.program,pb);await new Promise(r=>setTimeout(r,80));if(result.sub){const sb=document.querySelector(`.sub-btn[data-val="${result.sub}"]`);if(sb)selectSub(result.sub,sb);}}
+    }
+    const cc=result.confidence==='high'?'conf-high':result.confidence==='medium'?'conf-medium':'conf-low';
+    const cl=result.confidence==='high'?'✓ มั่นใจสูง':result.confidence==='medium'?'~ ปานกลาง':'? ไม่แน่ใจ';
+    const chips=[`<span class="ai-chip prog">💉 ${result.programName||result.program} — ${result.subName||result.sub}</span>`];
+    if(result.bodyPart&&result.bodyPart!=='ไม่พบ'&&result.bodyPart!=='ไม่ระบุ')chips.push(`<span class="ai-chip body">🫁 ${result.bodyPart}</span>`);
+    if(result.textFound&&result.textFound!=='ไม่พบข้อความ'&&result.textFound!=='วิดีโอ')chips.push(`<span class="ai-chip text-found">📝 "${result.textFound.substring(0,30)}"</span>`);
+    chips.push(`<span class="ai-chip ${cc}">${cl}</span>`);
+    document.getElementById('ai-chips').innerHTML=chips.join('');
+    document.getElementById('ai-reason-text').textContent=result.reason||'';
+    resultBox.style.display='block';
+  }catch(err){document.getElementById('ai-analyzing-box').style.display='none';console.warn('AI error:',err);}
+}
+
+async function handleFiles(fileList){
+  const badge=document.getElementById('checking-badge');badge.style.display='block';
+  for(const file of Array.from(fileList)){
+    const dataUrl=await new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(file);});
+    const base64=dataUrl.split(',')[1],isVid=file.type.startsWith('video/');
+    const hash=isVid?await computeVideoHash(dataUrl):await computePHash(dataUrl);
+    const idx=files.length;
+    files.push({file,dataUrl,base64,mimeType:file.type,name:file.name,hash,dupStatus:null});
+    renderPreview(idx,dataUrl,file.name,file.type);
+    if(hash&&savedHashes.length>0){
+      const matches=savedHashes.map(s=>({...s,sim:hashSim(hammingDist(hash,s.hash))})).filter(m=>m.sim>=98).sort((a,b)=>b.sim-a.sim);
+      if(matches.length>0){markPreviewDup(idx,matches[0].sim);files[idx].dupStatus='duplicate';files[idx].dupMatches=matches;}
+    }
+  }
+  badge.style.display='none';
+  updateFileCount();
+  checkAndShowDupPanel();
+  const bigFiles=files.filter(f=>f&&f.file.size>30*1024*1024);
+  document.getElementById('size-warn').style.display=bigFiles.length>0?'block':'none';
+  const validFiles=files.filter(f=>f&&!f.dupStatus);
+  if(validFiles.length>0){
+    autoDetectFromFiles(validFiles.map(f=>f.file));
+    unlockForm();
+    const firstImage=validFiles.find(f=>!f.file.type.startsWith('video/'));
+    if(firstImage)runAIAnalysis(firstImage);
+  } else if(files.filter(f=>f).length>0){lockForm();}
+}
+
+function markPreviewDup(idx,sim){const el=document.getElementById('prev-'+idx);if(!el)return;el.classList.add(sim>=95?'duplicate':'similar');const b=document.createElement('div');b.className='prev-dup-badge '+(sim>=95?'dup':'sim');b.textContent=sim>=95?'ซ้ำ!':sim+'%';el.appendChild(b);}
+function checkAndShowDupPanel(){
+  const dups=files.filter(f=>f&&f.dupStatus),panel=document.getElementById('dup-panel');
+  if(!dups.length){panel.classList.remove('show');dupBlocked=false;return;}
+  const hasDup=dups.some(f=>f.dupStatus==='duplicate');
+  panel.className='dup-panel show'+(hasDup?' danger':'');
+  document.getElementById('dup-title').className='dup-title '+(hasDup?'err':'warn');
+  document.getElementById('dup-title').textContent=hasDup?'🚫 พบรูปซ้ำ':'⚠️ พบรูปที่คล้ายกัน';
+  const all=[];dups.forEach(f=>f.dupMatches&&f.dupMatches.forEach(m=>{if(!all.find(x=>x.code===m.code))all.push(m);}));
+  document.getElementById('dup-desc').textContent='พบ '+all.length+' รายการที่ใกล้เคียง';
+  document.getElementById('dup-list').innerHTML=all.slice(0,8).map(m=>`<div class="dup-item ${m.sim>=95?'high':''}">${m.thumb?`<img src="${m.thumb}" onerror="this.style.display='none'">`:'<div style="width:86px;height:86px;background:#eee;display:flex;align-items:center;justify-content:center;font-size:10px;color:#999">ไม่มีรูป</div>'}<div class="dup-score ${m.sim>=95?'high':''}">${m.sim}% ${m.sim>=95?'ซ้ำ':'คล้าย'}</div><div class="dup-code-lbl">${m.code}</div></div>`).join('');
+  dupBlocked=hasDup;
+}
+function cancelDuplicate(){
+  files.map((f,i)=>f&&f.dupStatus?i:-1).filter(i=>i>=0).forEach(i=>removeFile(i));
+  document.getElementById('dup-panel').classList.remove('show');dupBlocked=false;updateFileCount();
+  const v=files.filter(f=>f&&!f.dupStatus);if(v.length>0)unlockForm();else lockForm();
+}
+function renderPreview(idx,dataUrl,name,mimeType){
+  const el=document.createElement('div');el.className='prev-wrap';el.id='prev-'+idx;
+  el.innerHTML=mimeType.startsWith('video/')?`<div class="vid-thumb"><div style="font-size:22px">🎬</div><div>${name.slice(0,9)}</div></div>`:`<img src="${dataUrl}" alt="">`;
+  el.innerHTML+=`<div class="prev-del" onclick="removeFile(${idx})">✕</div>`;
+  document.getElementById('previews').appendChild(el);
+}
+function removeFile(idx){
+  files[idx]=null;const el=document.getElementById('prev-'+idx);if(el)el.remove();
+  updateFileCount();checkAndShowDupPanel();
+  if(files.filter(f=>f).length===0)lockForm();
+}
+function updateFileCount(){
+  const c=files.filter(f=>f!==null).length;
+  document.getElementById('file-count').textContent=c>0?`เลือกแล้ว ${c} ไฟล์`:'';
+}
+const zone=document.getElementById('upload-zone');
+zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag');});
+zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
+zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag');handleFiles(e.dataTransfer.files);});
+
+async function submitForm(){
+  const branch=getEffectiveBranch(),prog=document.getElementById('program').value;
+  const year=getSelectedYear(),month=getSelectedMonth();
+  const activeFiles=files.filter(f=>f!==null);
+  if(activeFiles.length===0){showToast('กรุณาแนบไฟล์ก่อนบันทึก','error');return;}
+  if(!prog){showToast('กรุณาเลือกโปรแกรม','error');return;}
+  if(dupBlocked){showToast('⚠️ พบรูปซ้ำ — กรุณายกเลิกและเลือกรูปใหม่','error');return;}
+
+  // ต้อง login Google ก่อนเสมอ
+  if(!googleAccessToken){
+    showToast('กรุณากด "เชื่อมต่อ Google" ก่อนอัพโหลด','error');
+    document.getElementById('auth-banner').style.border='2px solid #ea4335';
+    return;
+  }
+
+  const sub=document.getElementById('sub').value||'00';
+  const note=document.getElementById('note').value.trim();
+  const btn=document.getElementById('submit-btn');btn.disabled=true;btn.textContent='กำลังอัพโหลด...';
+  const bar=document.getElementById('progress-bar'),fill=document.getElementById('progress-fill');
+  bar.style.display='block';fill.style.width='5%';
+  showToast('กำลังประมวลผล...','info');
+
+  try {
+    // ใช้ folder ID โดยตรง ไม่ผ่าน Apps Script
+    const folderId = "1onrWYD6dmUobTgmaWFcF9lOHSUiBMCcE1zvz4yBes_8z4E4fpCWiSXronfskht0cQzHjijiC";
+
+    fill.style.width='15%';
+
+    // อัพทุกไฟล์ตรง Drive API
+    const allFileLinks = [];
+    for(let i=0;i<activeFiles.length;i++){
+      btn.textContent=`อัพโหลดไฟล์ ${i+1}/${activeFiles.length}...`;
+      const link = await uploadLargeFileToDrive(activeFiles[i], folderId, pct=>{
+        fill.style.width=Math.round(15+(i/activeFiles.length)*65+pct*0.65/activeFiles.length)+'%';
+      });
+      link.hash = activeFiles[i].hash || '';
+      allFileLinks.push(link);
+    }
+
+    fill.style.width='85%';
+    btn.textContent='กำลังบันทึกข้อมูล...';
+
+    // ส่งเฉพาะ metadata ไปบันทึก Sheet (ไม่ส่ง base64)
+    const data={
+      type:currentType,program:prog,sub,branch,year,month,
+      mediaType:currentMedia,contentTitle:'',cardName:'',note,
+      files:[],
+      preUploadedFiles: allFileLinks
+    };
+
+    const result = await callScript('processForm',{data});
+    fill.style.width='100%';
+    if(!result.success){showToast('เกิดข้อผิดพลาด: '+result.error,'error');resetBtn(btn,bar);return;}
+
+    const yBE=parseInt(year)+543,mName=MONTH_NAMES[month]||month;
+    sessionHistory.unshift({code:result.code,branch,year:yBE,month:mName,type:currentType,media:currentMedia,files:allFileLinks.length,time:new Date().toLocaleTimeString('th-TH')});
+    renderHistory();
+    showToast('✓ บันทึกแล้ว! รหัส: '+result.code,'success');
+    loadHashesFromSheet();resetForm();resetBtn(btn,bar);
+  } catch(err){
+    showToast('เกิดข้อผิดพลาด: '+err.message,'error');resetBtn(btn,bar);
+  }
+}
+  const base64 = fileEntry.base64;
+  const CHUNK_B64 = 13 * 1024 * 1024; // ~10MB binary → ~13MB base64
+  const totalChunks = Math.ceil(base64.length / CHUNK_B64);
+  const uploadId = Date.now() + '_' + Math.random().toString(36).slice(2);
+  for (let i = 0; i < totalChunks; i++) {
+    const chunkData = base64.slice(i * CHUNK_B64, (i+1) * CHUNK_B64);
+    const res = await callScript('uploadChunk', { uploadId, chunkIndex: i, totalChunks, base64Data: chunkData });
+    if (!res.success) throw new Error('Chunk ' + i + ' failed');
+    if (onProgress) onProgress(Math.round((i + 1) / totalChunks * 80));
+  }
+  const result = await callScript('finalizeUpload', {
+    uploadId, fileName: fileEntry.file.name, mimeType: fileEntry.mimeType, totalChunks, folderId
+  });
+  if (!result.success) throw new Error(result.error || 'Finalize failed');
+  if (onProgress) onProgress(100);
+  return { ...result, hash: fileEntry.hash || '' };
+}
+
+async function submitForm(){
+  const branch=getEffectiveBranch(),prog=document.getElementById('program').value;
+  const year=getSelectedYear(),month=getSelectedMonth();
+  const activeFiles=files.filter(f=>f!==null);
+  if(activeFiles.length===0){showToast('กรุณาแนบไฟล์ก่อนบันทึก','error');return;}
+  if(!prog){showToast('กรุณาเลือกโปรแกรม','error');return;}
+  if(dupBlocked){showToast('⚠️ พบรูปซ้ำ — กรุณายกเลิกและเลือกรูปใหม่','error');return;}
+
+  const LIMIT = 30*1024*1024; // 30MB
+  const bigFiles   = activeFiles.filter(f=>f.file.size > LIMIT);
+  const smallFiles = activeFiles.filter(f=>f.file.size <= LIMIT);
+
+  // ถ้ามีไฟล์ใหญ่ แต่ยังไม่ได้ login
+  if (bigFiles.length > 0 && !googleAccessToken) {
+    showToast('กรุณาเชื่อมต่อ Google Drive ก่อนอัพโหลดวิดีโอขนาดใหญ่','error');
+    document.getElementById('auth-banner').style.border='2px solid #ea4335';
+    return;
+  }
+
+  const sub=document.getElementById('sub').value||'00';
+  const note=document.getElementById('note').value.trim();
+  const btn=document.getElementById('submit-btn');btn.disabled=true;btn.textContent='กำลังอัพโหลด...';
+  const bar=document.getElementById('progress-bar'),fill=document.getElementById('progress-fill');
+  bar.style.display='block';fill.style.width='5%';
+  showToast('กำลังประมวลผล...','info');
+
+  try {
+    // ขอ folderId ถ้ามีไฟล์ใหญ่
+    let folderId = null;
+    if (bigFiles.length > 0) {
+      btn.textContent='กำลังเตรียมโฟลเดอร์...';
+      const folderRes = await callScript('getOrCreateFolder',{branch,program:prog,year,month});
+      if (!folderRes||!folderRes.folderId) throw new Error('ไม่สามารถสร้างโฟลเดอร์ได้');
+      folderId = folderRes.folderId;
+    }
+
+    // อัพไฟล์ใหญ่ตรง Drive API
+    const bigFileLinks = [];
+    for (let i=0;i<bigFiles.length;i++) {
+      btn.textContent=`อัพวิดีโอ ${i+1}/${bigFiles.length} (${Math.round(bigFiles[i].file.size/1024/1024)}MB)...`;
+      const link = await uploadLargeFileToDrive(bigFiles[i], folderId, pct=>{
+        fill.style.width=Math.round(5+(i/bigFiles.length)*70+pct*0.7/bigFiles.length)+'%';
+      });
+      bigFileLinks.push(link);
+    }
+
+    fill.style.width='80%';
+    btn.textContent='กำลังบันทึกข้อมูล...';
+
+    const data={
+      type:currentType,program:prog,sub,branch,year,month,
+      mediaType:currentMedia,contentTitle:'',cardName:'',note,
+      files:smallFiles.map(f=>({name:f.file.name,mimeType:f.mimeType,base64:f.base64,hash:f.hash||null})),
+      preUploadedFiles: bigFileLinks
+    };
+
+    const result = await callScript('processForm',{data});
+    fill.style.width='100%';
+    if(!result.success){showToast('เกิดข้อผิดพลาด: '+result.error,'error');resetBtn(btn,bar);return;}
+
+    const yBE=parseInt(year)+543,mName=MONTH_NAMES[month]||month;
+    const totalFiles=(result.fileLinks||[]).length+bigFileLinks.length;
+    sessionHistory.unshift({code:result.code,branch,year:yBE,month:mName,type:currentType,media:currentMedia,files:totalFiles,time:new Date().toLocaleTimeString('th-TH')});
+    renderHistory();
+    showToast('✓ บันทึกแล้ว! รหัส: '+result.code,'success');
+    loadHashesFromSheet();resetForm();resetBtn(btn,bar);
+  } catch(err) {
+    showToast('เกิดข้อผิดพลาด: '+err.message,'error');resetBtn(btn,bar);
+  }
+}
+
+function resetBtn(btn,bar){
+  setTimeout(()=>{bar.style.display='none';document.getElementById('progress-fill').style.width='0%';},1000);
+  btn.disabled=false;btn.textContent='บันทึกและสร้างรหัส → อัพโหลด Drive + บันทึก Sheet';
+}
+function resetForm(){
+  document.getElementById('note').value='';
+  document.getElementById('previews').innerHTML='';
+  document.getElementById('file-count').textContent='';
+  document.getElementById('file-input').value='';
+  document.getElementById('dup-panel').classList.remove('show');
+  document.getElementById('type-hint').style.display='none';
+  document.getElementById('ai-result-box').style.display='none';
+  document.getElementById('ai-analyzing-box').style.display='none';
+  document.getElementById('size-warn').style.display='none';
+  document.querySelectorAll('.prog-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sub-section').style.display='none';
+  files=[];dupBlocked=false;lockForm();updateCode();
+}
+function renderHistory(){
+  document.getElementById('history-card').style.display='block';
+  if(sessionHistory.length>0){
+    const lastCode=sessionHistory[0].code;
+    document.getElementById('last-code').textContent=lastCode;
+    const cb=document.getElementById('copy-last-btn');cb.disabled=false;cb.style.opacity='1';cb.style.cursor='pointer';
+  }
+  const typeLabel={P:'โปรโมชั่น',R:'รีวิว',A:'Awareness'};
+  document.getElementById('history-list').innerHTML=sessionHistory.slice(0,15).map(h=>`
+    <div class="history-item">
+      <div class="hi-code">${h.code}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;color:#3c4043"><span class="badge badge-${h.code[0].toLowerCase()}">${typeLabel[h.code[0]]||h.code[0]}</span> · ${h.media}</div>
+        <div style="font-size:12px;color:#80868b">
+          ${h.branch==='ALL'?'<span style="background:#e8f0fe;color:#1a73e8;padding:1px 6px;border-radius:10px;font-size:11px;font-weight:700">ทุกสาขา</span>':h.branch}
+          · ${h.year}/${h.month}
+          ${h.files>0?' · <span style="color:#34a853;font-weight:500">✓ '+h.files+' ไฟล์</span>':''}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <button onclick="navigator.clipboard.writeText('${h.code}').then(()=>showToast('คัดลอก ${h.code}','success'))"
+          style="background:var(--gray-100);border:1px solid var(--gray-200);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--gray-800)">คัดลอก</button>
+        <div class="hi-time">${h.time}</div>
+      </div>
+    </div>`).join('');
+}
+let toastTimer;
+function showToast(msg,type='info'){const el=document.getElementById('toast');el.textContent=msg;el.className='toast '+type+' show';clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3500);}
+window.addEventListener('load',()=>{initYearMonth();loadHashesFromSheet();initGoogleAuth();});
+</script>
+</body>
+</html>
